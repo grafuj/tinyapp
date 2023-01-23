@@ -14,7 +14,7 @@ function generateRandomString() {
   //we want a hex string of 6 chars
   let randStr = "";
   for (let i = 0; i < 6; i++) {
-    randStr += fullhex[Math.floor(36 * Math.random())];
+    randStr += fullhex[Math.floor(fullhex.length * Math.random())];
   }
   return randStr;
 }
@@ -39,15 +39,16 @@ app.get("/urls", (req, res) => {
 app.post("/urls", (req, res) => {
   console.log(req.body);
   let id = generateRandomString();
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
-})
+  urlDatabase[id] = req.body.longURL;
+  res.redirect(`/urls/${id}`);
+});
 
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-app.get(`/urls/${generateRandomString}`, (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase.b2xVn2/* What goes here? */ };
+app.get('/urls/:id', (req, res) => {
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id]};
   res.render("urls_show", templateVars);
 });
 
