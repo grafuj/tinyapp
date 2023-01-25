@@ -61,6 +61,12 @@ app.post("/urls/:id", (req, res) => {
   res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on line 37 "const templateVars = { urls: urlDatabase };"
 });
 
+app.post("/login", (req, res) => {
+  let user = req.params;
+  console.log("user:", user)
+  res.cookie(user);
+})
+
 app.get('/urls/:id', (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
