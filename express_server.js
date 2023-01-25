@@ -71,6 +71,13 @@ app.post("/login", (req, res) => {
   res.redirect("/urls");
 });
 
+app.post("/logout", (req, res) => {
+  let user = req.body.username;
+  console.log("clearing user:", user);
+  res.clearCookie("user", { path: "/"});
+  res.redirect("/urls");
+});
+
 app.get('/urls/:id', (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
