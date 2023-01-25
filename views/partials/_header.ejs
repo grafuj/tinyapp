@@ -11,6 +11,8 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
         <form class="form-inline ml-auto" action="/login" method="POST">
           <div class="form-group mb-2">
+             <!-- Here we use templating engine from ejs and we display our variable user passed from server.js line 39.  -->
+            <h6><%= user %></h6>
             <label for="longURL">Login:</label>
             <input
               class="form-control"
