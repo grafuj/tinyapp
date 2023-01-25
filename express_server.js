@@ -5,7 +5,9 @@ app.set("view engine", "ejs");
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "9sm5xK": "http://www.google.com",
+  "975xgK": "http://www.google.com/2",
+  "y6890s": "http://www.google.com/3",
 };
 
 function generateRandomString() {
@@ -49,12 +51,18 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   delete urlDatabase[req.params.id];
-  const templateVars = { urls: urlDatabase };
-  res.render("urls_index", templateVars);
-})
+  res.redirect("/urls");
+});
+
+app.post("/urls/:id", (req, res) => {
+  let id = req.params.id;
+  urlDatabase[id] = req.body.longURL;
+  //don't need to use render as we don't need a new page, we just want to go back to our new updated homepage
+  res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on line 37 "const templateVars = { urls: urlDatabase };"
+});
 
 app.get('/urls/:id', (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id]};
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
 });
 
