@@ -62,10 +62,11 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  let user = req.params;
-  console.log("user:", user)
-  res.cookie(user);
-})
+  let user = req.body.username;
+  console.log("user:", user);
+  res.cookie("user", user);
+  res.redirect("/urls");
+});
 
 app.get('/urls/:id', (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
