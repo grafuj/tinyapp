@@ -1,9 +1,14 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
+const bcrypt = require("bcryptjs");
+const morgan = require("morgan");
+
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
 app.use(cookieParser());
+app.use(morgan('dev'));
+
 
 const urlDatabase = {
   "b2xVn2": {
@@ -21,7 +26,7 @@ const urlDatabase = {
 };
 
 const userDatabase = {
-  "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '123' }
+  "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '$2a$10$2H4FMClqnElLNs6KVI35WeuW0rr6DNPVQt6Bn00hWTnM.9M/c8rau' }
 };
 
 //start server: ./node_modules/.bin/nodemon -L express_server.js
@@ -133,8 +138,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
-  // userAlreadyExists("bob@shaw.ca");
+  console.log("email", email, "password:", password)
   if (!email || !password) {
     //blanks
     return res.status(400).send("Email or password are blank");
@@ -143,10 +147,14 @@ app.post("/register", (req, res) => {
     return res.status(400).send('That email is already in use');
   }
 
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  console.log('hashedPassword:', hashedPassword);
+
   const id = generateRandomString();
-  userDatabase[id] = { id, email, password };
+  userDatabase[id] = { id, email, password: hashedPassword };
   // userDatabase[id] = {...req.body, id}  //... is spread operator which means make a copy of that object
-  // console.log(userDatabase);
+  console.log(userDatabase);
   res.cookie("user_id", id); //res.cookie takes in a key and value
   res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code
 });
@@ -222,7 +230,9 @@ app.post("/login", (req, res) => {
     return res.status(403).send('user not found');
   }
 
-  if (user.password !== password) {
+  console.log('passwords are same:', bcrypt.compareSync(password, user.password));
+
+  if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send('the passwords do not match');
   }
 
@@ -249,6 +259,10 @@ app.get('/urls/:id', (req, res) => {
   const templateVars = { id, longURL, user };
   res.render("urls_show", templateVars);
 });
+
+app.get('*', (req, res) => { //if we try to go to another page, we'll get sent to urls or login
+  res.redirect('/urls')
+})
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
