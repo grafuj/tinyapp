@@ -1,14 +1,22 @@
+const { generateRandomString, getUserByEmail, urlsForUser } = require("./helpers");
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser'); //delete
 const bcrypt = require("bcryptjs");
 const morgan = require("morgan");
+const session = require("cookie-session");
 
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
-app.use(cookieParser());
-app.use(morgan('dev'));
+app.use(cookieParser()); //delete after implementing session
+app.use(session({
+  name: 'session',
+  keys: ["2304f09f90garbagefdg90dgf", "extragoodgarbage34tr34tr345t", "g34590df34f43f2312e23"],
 
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
+app.use(morgan('dev'));
 
 const urlDatabase = {
   "b2xVn2": {
@@ -32,37 +40,7 @@ const userDatabase = {
 //start server: ./node_modules/.bin/nodemon -L express_server.js
 //curl -X POST -i -v --cookie "user_id=b6789d" localhost:8080/urls/9sm5xK/delete
 
-function generateRandomString() {
-  let fullhex = 'abcdefghijklmnoqrstuvwxyz0123456789';
 
-  //we want a hex string of 6 chars
-  let randStr = "";
-  for (let i = 0; i < 6; i++) {
-    randStr += fullhex[Math.floor(fullhex.length * Math.random())];
-  }
-  return randStr;
-}
-
-const getUserByEmail = (email) => {
-  for (let userId in userDatabase) {
-    const user = userDatabase[userId];
-    console.log('------user: ', userId, "userDatabase@string:", userDatabase[userId].email);
-    if (user.email === email) {
-      return user;
-    }
-  }
-  return;
-};
-
-const urlsForUser = (id) => {
-  let myURLs = {};
-  for (let urlId in urlDatabase) {
-    if (urlDatabase[urlId].userID === id) {
-      myURLs[urlId] = urlDatabase[urlId];
-    }
-  }
-  return myURLs;
-};
 
 app.use(express.urlencoded({ extended: true })); //converts from raw buffer into string
 
@@ -74,14 +52,15 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const id = req.cookies.user_id;
+  console.log(req.session);
+  const id = req.session.user_id;
   const user = userDatabase[id]; //this actually check the database for if that id exists
   if (!user) {
     res.redirect("/login");
     return;
     // return res.status(403).send("Only logged in users can view this page");
   }
-  let myURLs = urlsForUser(id);
+  let myURLs = urlsForUser(id, urlDatabase);
 
 
   const templateVars = { myURLs, user };
@@ -90,7 +69,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   const user = userDatabase[id];
   console.log('id:', id);
 
@@ -104,12 +83,12 @@ app.post("/urls", (req, res) => {
   urlDatabase[newId] = { longURL: req.body.longURL, userID: id }; //add it to the database!
   // urlDatabase[newId].longURL = req.body.longURL;
   // urlDatabase[newId].userID = id;
-  // console.log('Cookies: ', req.cookies)
+  console.log('Cookies: ', req.cookies);
   res.redirect(`/urls/${newId}`);
 });
 
 app.get("/urls/new", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   const user = userDatabase[id];
 
   if (!user) {
@@ -122,7 +101,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   const user = userDatabase[id];
 
   if (user) {
@@ -138,12 +117,12 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  console.log("email", email, "password:", password)
+  console.log("email", email, "password:", password);
   if (!email || !password) {
     //blanks
     return res.status(400).send("Email or password are blank");
   }
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, userDatabase)) {
     return res.status(400).send('That email is already in use');
   }
 
@@ -155,12 +134,13 @@ app.post("/register", (req, res) => {
   userDatabase[id] = { id, email, password: hashedPassword };
   // userDatabase[id] = {...req.body, id}  //... is spread operator which means make a copy of that object
   console.log(userDatabase);
-  res.cookie("user_id", id); //res.cookie takes in a key and value
+  req.session.user_id = id;
+  // res.cookie("user_id", id); //res.cookie takes in a key and value
   res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   const user = userDatabase[id];
   console.log('id:', id);
   if (!user) {
@@ -183,7 +163,7 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.post("/urls/:id", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   const user = userDatabase[id];
   console.log('id:', id);
   if (!user) {  //not logged in
@@ -208,7 +188,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const id = req.cookies.user_id;
+  const id = req.session.user_id;
   console.log('id:', id);
   // console.log('user', user);
 
@@ -225,7 +205,7 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, userDatabase);
   if (!user) { //returned undefined
     return res.status(403).send('user not found');
   }
@@ -235,18 +215,20 @@ app.post("/login", (req, res) => {
   if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send('the passwords do not match');
   }
-
-  res.cookie("user_id", user.id);
+  console.log('req.session', req.session);
+  req.session.user_id = user.id;
+  // req.session.user = user;
+  // res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/urls");
 });
 
 app.get('/urls/:id', (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
   const user = userDatabase[userId];
 
   if (!user) {
@@ -261,9 +243,14 @@ app.get('/urls/:id', (req, res) => {
 });
 
 app.get('*', (req, res) => { //if we try to go to another page, we'll get sent to urls or login
-  res.redirect('/urls')
-})
+  res.redirect('/urls');
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+// module.exports = {
+//   urlDatabase,
+//   userDatabase,
+// }
