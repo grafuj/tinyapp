@@ -6,10 +6,18 @@ app.set("view engine", "ejs");
 app.use(cookieParser());
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
-  "975xgK": "http://www.google.com/2",
-  "y6890s": "http://www.google.com/3",
+  "b2xVn2": {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "b6789d",
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userID: "b6789dasdfasdf",
+  },
+  "j75xgK": {
+    longURL: "http://www.google.com/2",
+    userID: "b6789d",
+  },
 };
 
 const userDatabase = {
@@ -17,6 +25,7 @@ const userDatabase = {
 };
 
 //start server: ./node_modules/.bin/nodemon -L express_server.js
+//curl -X POST -i -v --cookie "user_id=b6789d" localhost:8080/urls/9sm5xK/delete
 
 function generateRandomString() {
   let fullhex = 'abcdefghijklmnoqrstuvwxyz0123456789';
@@ -40,6 +49,16 @@ const getUserByEmail = (email) => {
   return;
 };
 
+const urlsForUser = (id) => {
+  let myURLs = {};
+  for (let urlId in urlDatabase) {
+    if (urlDatabase[urlId].userID === id) {
+      myURLs[urlId] = urlDatabase[urlId];
+    }
+  }
+  return myURLs;
+};
+
 app.use(express.urlencoded({ extended: true })); //converts from raw buffer into string
 
 app.get("/", (req, res) => {
@@ -48,29 +67,51 @@ app.get("/", (req, res) => {
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
-// app.get("/urls.json", (req, res) => {
-//   res.json(urlDatabase);
-// });
 
 app.get("/urls", (req, res) => {
   const id = req.cookies.user_id;
-  const user = userDatabase[id];
-  const templateVars = { urls: urlDatabase, user };
+  const user = userDatabase[id]; //this actually check the database for if that id exists
+  if (!user) {
+    res.redirect("/login");
+    return;
+    // return res.status(403).send("Only logged in users can view this page");
+  }
+  let myURLs = urlsForUser(id);
+
+
+  const templateVars = { myURLs, user };
 
   res.render("urls_index", templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  console.log("on urls", req.body);
-  let id = generateRandomString();
-  urlDatabase[id] = req.body.longURL;
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  console.log('id:', id);
+
+  if (!user) {
+
+    return res.status(403).send("Only logged in users can shorten URLs");
+  }
+  console.log(req.body);
+
+  let newId = generateRandomString();
+  urlDatabase[newId] = { longURL: req.body.longURL, userID: id }; //add it to the database!
+  // urlDatabase[newId].longURL = req.body.longURL;
+  // urlDatabase[newId].userID = id;
   // console.log('Cookies: ', req.cookies)
-  res.redirect(`/urls/${id}`);
+  res.redirect(`/urls/${newId}`);
 });
 
 app.get("/urls/new", (req, res) => {
   const id = req.cookies.user_id;
   const user = userDatabase[id];
+
+  if (!user) {
+    // return res.status(403).send("Only logged in users can shorten URLs");
+    res.redirect("/login");
+    return;
+  }
   // we've cut out templateVars = {user} as convenience variable
   res.render("urls_new", { user });
 });
@@ -78,20 +119,17 @@ app.get("/urls/new", (req, res) => {
 app.get("/register", (req, res) => {
   const id = req.cookies.user_id;
   const user = userDatabase[id];
+
+  if (user) {
+    res.redirect("/urls");
+    return;
+  }
+
   const templateVars = {
     user: null,
   };
   res.render("register", templateVars);
 });
-app.get("/login", (req, res) => {
-  const id = req.cookies.user_id;
-  const user = userDatabase[id];
-  const templateVars = {
-    user: null,
-  };
-  res.render("login", templateVars);
-});
-
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -106,7 +144,7 @@ app.post("/register", (req, res) => {
   }
 
   const id = generateRandomString();
-  userDatabase[id] = { id, email, password};
+  userDatabase[id] = { id, email, password };
   // userDatabase[id] = {...req.body, id}  //... is spread operator which means make a copy of that object
   // console.log(userDatabase);
   res.cookie("user_id", id); //res.cookie takes in a key and value
@@ -114,17 +152,67 @@ app.post("/register", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  delete urlDatabase[req.params.id];
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  console.log('id:', id);
+  if (!user) {
+    return res.status(403).send("Only logged in users can delete URLs");
+  }
+
+  //get url ID
+  const urlToDelete = req.params.id;
+
+  if (!urlDatabase[urlToDelete]) { //id does not exist
+    return res.status(403).send("That's not a valid short URL by my database");
+  }
+
+  let urlOwner = urlDatabase[urlToDelete].userID;
+  if (id !== urlOwner) {
+    return res.status(403).send("You don't own that URL! You can't Delete it!");
+  }
+  delete urlDatabase[urlToDelete];
   res.redirect("/urls");
 });
 
 app.post("/urls/:id", (req, res) => {
-  let id = req.params.id;
-  urlDatabase[id] = req.body.longURL;
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  console.log('id:', id);
+  if (!user) {  //not logged in
+    return res.status(403).send("Only logged in users can shorten URLs");
+  }
+
+  //get url ID
+  let urlIDToUpdate = req.params.id;
+
+  if (!urlDatabase[urlIDToUpdate]) { //id does not exist
+    return res.status(403).send("That's not a valid short URL by my database");
+  }
+
+  let urlOwner = urlDatabase[urlIDToUpdate].userID;
+  if (id !== urlOwner) { //not URL Owner
+    return res.status(403).send("You don't own that URL! You can't Edit it!");
+  }
+
+  urlDatabase[urlIDToUpdate].longURL = req.body.longURL;
   //don't need to use render as we don't need a new page, we just want to go back to our new updated homepage
   res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on line 37 "const templateVars = { urls: urlDatabase };"
 });
 
+app.get("/login", (req, res) => {
+  const id = req.cookies.user_id;
+  console.log('id:', id);
+  // console.log('user', user);
+
+  if (id) {
+    res.redirect("/urls");
+    return;
+  }
+  const templateVars = {
+    user: null,
+  };
+  res.render("login", templateVars);
+});
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -151,10 +239,14 @@ app.get('/urls/:id', (req, res) => {
   const userId = req.cookies.user_id;
   const user = userDatabase[userId];
 
-  const id = req.params.id;
-  const longURL = urlDatabase[id];
+  if (!user) {
+    return res.status(403).send("Only logged in users can shorten URLs");
+  }
 
-  const templateVars = {id, longURL, user};
+  const id = req.params.id;
+  const longURL = urlDatabase[id].longURL;
+
+  const templateVars = { id, longURL, user };
   res.render("urls_show", templateVars);
 });
 
