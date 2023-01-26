@@ -9,23 +9,20 @@
       <div class="navbar-nav d-flex align-items-center w-100">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+        <a class="nav-item nav-link" href="/register">Register</a>
         <% if (user) { %>
+          <div class="m-auto" for="longURL">Logged in as: <%= user.email %></div>
           <form class="form-inline ml-auto" action="/logout" method="POST">
             <div class="form-group mb-2">
-              <label for="longURL">Logged in as: &nbsp </label>
               <!-- Here we use templating engine from ejs and we display our variable user passed from server.js line 39.  -->
               <h6>
-                <%= user %>
               </h6>
               <button type="submit" class="btn btn-primary">Logout</button>
             </div>
           </form>
           <% } else { %>
-            <form class="form-inline ml-auto" action="/login" method="POST">
+            <form class="form-inline ml-auto" action="/login" method="GET">
               <div class="form-group mb-2">
-                <label for="longURL">Login:</label>
-                <input class="form-control" type="text" name="username" placeholder="Enter your username here"
-                  style="width: 300px; margin: 1em" />
                 <button type="submit" class="btn btn-primary">Login</button>
               </div>
             </form>

@@ -12,6 +12,12 @@ const urlDatabase = {
   "y6890s": "http://www.google.com/3",
 };
 
+const userDatabase = {
+  "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '123' }
+};
+
+//start server: ./node_modules/.bin/nodemon -L express_server.js
+
 function generateRandomString() {
   let fullhex = 'abcdefghijklmnoqrstuvwxyz0123456789';
 
@@ -23,10 +29,21 @@ function generateRandomString() {
   return randStr;
 }
 
+const getUserByEmail = (email) => {
+  for (let userId in userDatabase) {
+    const user = userDatabase[userId];
+    console.log('------user: ', userId, "userDatabase@string:", userDatabase[userId].email);
+    if (user.email === email) {
+      return user;
+    }
+  }
+  return;
+};
+
 app.use(express.urlencoded({ extended: true })); //converts from raw buffer into string
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect("/urls");
 });
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
@@ -36,12 +53,15 @@ app.get("/hello", (req, res) => {
 // });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: req.cookies["user"] };
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  const templateVars = { urls: urlDatabase, user };
+
   res.render("urls_index", templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);
+  console.log("on urls", req.body);
   let id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
   // console.log('Cookies: ', req.cookies)
@@ -49,7 +69,48 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  // we've cut out templateVars = {user} as convenience variable
+  res.render("urls_new", { user });
+});
+
+app.get("/register", (req, res) => {
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  const templateVars = {
+    user: null,
+  };
+  res.render("register", templateVars);
+});
+app.get("/login", (req, res) => {
+  const id = req.cookies.user_id;
+  const user = userDatabase[id];
+  const templateVars = {
+    user: null,
+  };
+  res.render("login", templateVars);
+});
+
+app.post("/register", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  // userAlreadyExists("bob@shaw.ca");
+  if (!email || !password) {
+    //blanks
+    return res.status(400).send("Email or password are blank");
+  }
+  if (getUserByEmail(email)) {
+    return res.status(400).send('That email is already in use');
+  }
+
+  const id = generateRandomString();
+  userDatabase[id] = { id, email, password};
+  // userDatabase[id] = {...req.body, id}  //... is spread operator which means make a copy of that object
+  // console.log(userDatabase);
+  res.cookie("user_id", id); //res.cookie takes in a key and value
+  res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -65,21 +126,35 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  let user = req.body.username;
-  console.log("user:", user);
-  res.cookie("user", user);
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const user = getUserByEmail(email);
+  if (!user) { //returned undefined
+    return res.status(403).send('user not found');
+  }
+
+  if (user.password !== password) {
+    return res.status(403).send('the passwords do not match');
+  }
+
+  res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  let user = req.body.username;
-  console.log("clearing user:", user);
-  res.clearCookie("user", { path: "/"});
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 app.get('/urls/:id', (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
+  const userId = req.cookies.user_id;
+  const user = userDatabase[userId];
+
+  const id = req.params.id;
+  const longURL = urlDatabase[id];
+
+  const templateVars = {id, longURL, user};
   res.render("urls_show", templateVars);
 });
 
