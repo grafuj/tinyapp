@@ -6,7 +6,9 @@ TinyApp is a full stack web application built with Node and Express that allows 
 Keep track of your URLs:
 !["Screenshot of a URLs Page"](https://github.com/grafuj/tinyapp/blob/master/docs/URLs%20Page.PNG?raw=true)
 
+
 Create a new URL:
+
 !["Screenshot of Creating a New URL"](https://github.com/grafuj/tinyapp/blob/master/docs/Create%20New%20URL.PNG?raw=true)
 
 ## Dependencies
