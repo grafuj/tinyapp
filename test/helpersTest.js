@@ -28,5 +28,4 @@ describe('getUserByEmail', function() {
     // Write your assert statement here
     assert.strictEqual(user, expectedUserID);
   });
-
 });

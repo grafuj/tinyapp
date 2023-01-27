@@ -74,7 +74,6 @@ app.post("/urls", (req, res) => {
   console.log('id:', id);
 
   if (!user) {
-
     return res.status(403).send("Only logged in users can shorten URLs");
   }
   console.log(req.body);
@@ -84,6 +83,7 @@ app.post("/urls", (req, res) => {
   // urlDatabase[newId].longURL = req.body.longURL;
   // urlDatabase[newId].userID = id;
   console.log('Cookies: ', req.cookies);
+  console.log(urlDatabase);
   res.redirect(`/urls/${newId}`);
 });
 
@@ -181,6 +181,10 @@ app.post("/urls/:id", (req, res) => {
   if (id !== urlOwner) { //not URL Owner
     return res.status(403).send("You don't own that URL! You can't Edit it!");
   }
+  
+  if (!req.body.longURL) {
+    return res.status(422).send("You need to enter a URL to update this URL");
+  }
 
   urlDatabase[urlIDToUpdate].longURL = req.body.longURL;
   //don't need to use render as we don't need a new page, we just want to go back to our new updated homepage
@@ -230,6 +234,7 @@ app.post("/logout", (req, res) => {
 app.get('/urls/:id', (req, res) => {
   const userId = req.session.user_id;
   const user = userDatabase[userId];
+  console.log('urlDatabase:', urlDatabase);
 
   if (!user) {
     return res.status(403).send("Only logged in users can shorten URLs");
@@ -249,8 +254,3 @@ app.get('*', (req, res) => { //if we try to go to another page, we'll get sent t
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-// module.exports = {
-//   urlDatabase,
-//   userDatabase,
-// }
