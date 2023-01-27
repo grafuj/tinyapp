@@ -144,7 +144,7 @@ app.get("/login", (req, res) => {
   const id = req.session.user_id;
   
   if (id) {
-    console.log(id, 'circular')
+    console.log(id, 'circular');
     res.redirect("/urls");
     return;
   }
