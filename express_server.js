@@ -1,6 +1,5 @@
 const { generateRandomString, getUserByEmail, urlsForUser } = require("./helpers");
 const express = require("express");
-const cookieParser = require('cookie-parser'); //delete
 const bcrypt = require("bcryptjs");
 const morgan = require("morgan");
 const session = require("cookie-session");
@@ -8,7 +7,6 @@ const session = require("cookie-session");
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
-app.use(cookieParser()); //delete after implementing session
 app.use(session({
   name: 'session',
   keys: ["2304f09f90garbagefdg90dgf", "extragoodgarbage34tr34tr345t", "g34590df34f43f2312e23"],
@@ -25,7 +23,7 @@ const urlDatabase = {
   },
   "9sm5xK": {
     longURL: "http://www.google.com",
-    userID: "b6789dasdfasdf",
+    userID: "b67asd",
   },
   "j75xgK": {
     longURL: "http://www.google.com/2",
@@ -37,13 +35,9 @@ const userDatabase = {
   "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '$2a$10$2H4FMClqnElLNs6KVI35WeuW0rr6DNPVQt6Bn00hWTnM.9M/c8rau' }
 };
 
-//start server: ./node_modules/.bin/nodemon -L express_server.js
-//curl -X POST -i -v --cookie "user_id=b6789d" localhost:8080/urls/9sm5xK/delete
-
-
-
 app.use(express.urlencoded({ extended: true })); //converts from raw buffer into string
 
+//leaving these two in for now, should re
 app.get("/", (req, res) => {
   res.redirect("/urls");
 });
@@ -52,13 +46,11 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  console.log(req.session);
   const id = req.session.user_id;
   const user = userDatabase[id]; //this actually check the database for if that id exists
   if (!user) {
     res.redirect("/login");
     return;
-    // return res.status(403).send("Only logged in users can view this page");
   }
   let myURLs = urlsForUser(id, urlDatabase);
 
@@ -71,19 +63,13 @@ app.get("/urls", (req, res) => {
 app.post("/urls", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
-  console.log('id:', id);
 
   if (!user) {
     return res.status(403).send("Only logged in users can shorten URLs");
   }
-  console.log(req.body);
 
   let newId = generateRandomString();
   urlDatabase[newId] = { longURL: req.body.longURL, userID: id }; //add it to the database!
-  // urlDatabase[newId].longURL = req.body.longURL;
-  // urlDatabase[newId].userID = id;
-  console.log('Cookies: ', req.cookies);
-  console.log(urlDatabase);
   res.redirect(`/urls/${newId}`);
 });
 
@@ -92,7 +78,6 @@ app.get("/urls/new", (req, res) => {
   const user = userDatabase[id];
 
   if (!user) {
-    // return res.status(403).send("Only logged in users can shorten URLs");
     res.redirect("/login");
     return;
   }
@@ -117,32 +102,27 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  console.log("email", email, "password:", password);
+  //blanks
   if (!email || !password) {
-    //blanks
     return res.status(400).send("Email or password are blank");
   }
   if (getUserByEmail(email, userDatabase)) {
     return res.status(400).send('That email is already in use');
   }
 
-
   const hashedPassword = bcrypt.hashSync(password, 10);
-  console.log('hashedPassword:', hashedPassword);
 
   const id = generateRandomString();
   userDatabase[id] = { id, email, password: hashedPassword };
-  // userDatabase[id] = {...req.body, id}  //... is spread operator which means make a copy of that object
-  console.log(userDatabase);
+
   req.session.user_id = id;
-  // res.cookie("user_id", id); //res.cookie takes in a key and value
-  res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code
+  res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code so we only have one parameter
 });
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
-  console.log('id:', id);
+
   if (!user) {
     return res.status(403).send("Only logged in users can delete URLs");
   }
@@ -165,7 +145,7 @@ app.post("/urls/:id/delete", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
-  console.log('id:', id);
+  
   if (!user) {  //not logged in
     return res.status(403).send("Only logged in users can shorten URLs");
   }
@@ -181,20 +161,18 @@ app.post("/urls/:id", (req, res) => {
   if (id !== urlOwner) { //not URL Owner
     return res.status(403).send("You don't own that URL! You can't Edit it!");
   }
-  
+
   if (!req.body.longURL) {
     return res.status(422).send("You need to enter a URL to update this URL");
   }
 
   urlDatabase[urlIDToUpdate].longURL = req.body.longURL;
   //don't need to use render as we don't need a new page, we just want to go back to our new updated homepage
-  res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on line 37 "const templateVars = { urls: urlDatabase };"
+  res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on return to /urls
 });
 
 app.get("/login", (req, res) => {
   const id = req.session.user_id;
-  console.log('id:', id);
-  // console.log('user', user);
 
   if (id) {
     res.redirect("/urls");
@@ -210,19 +188,14 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
 
   const user = getUserByEmail(email, userDatabase);
-  if (!user) { //returned undefined
+  if (!user) { //returned undefined or otherwise
     return res.status(403).send('user not found');
   }
-
-  console.log('passwords are same:', bcrypt.compareSync(password, user.password));
 
   if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send('the passwords do not match');
   }
-  console.log('req.session', req.session);
   req.session.user_id = user.id;
-  // req.session.user = user;
-  // res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
@@ -234,13 +207,15 @@ app.post("/logout", (req, res) => {
 app.get('/urls/:id', (req, res) => {
   const userId = req.session.user_id;
   const user = userDatabase[userId];
-  console.log('urlDatabase:', urlDatabase);
 
   if (!user) {
     return res.status(403).send("Only logged in users can shorten URLs");
   }
 
   const id = req.params.id;
+  if (!urlDatabase[id]) {
+    return res.status(403).send("That's not a shortened URL ID!");
+  }
   const longURL = urlDatabase[id].longURL;
 
   const templateVars = { id, longURL, user };

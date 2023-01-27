@@ -1,5 +1,3 @@
-// const { urlDatabase, userDatabase } = require("./express_server");
-
 const generateRandomString = () => {
   let fullhex = 'abcdefghijklmnoqrstuvwxyz0123456789';
 
@@ -9,7 +7,7 @@ const generateRandomString = () => {
     randStr += fullhex[Math.floor(fullhex.length * Math.random())];
   }
   return randStr;
-}
+};
 
 const getUserByEmail = (email, userDatabase) => {
   for (let userId in userDatabase) {
@@ -36,4 +34,4 @@ module.exports = {
   generateRandomString,
   getUserByEmail,
   urlsForUser,
-}
+};
