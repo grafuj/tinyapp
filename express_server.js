@@ -45,7 +45,7 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
 
-  /* "it is better to check if session contains user_id and redirect to /login before reading the database" -Rahul */
+  /* it is better to check if session contains user_id and redirect to /login before reading the database */
   if (!id) {
     res.redirect("/login");
     return;
