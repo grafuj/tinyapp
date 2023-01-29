@@ -142,7 +142,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.get("/login", (req, res) => {
   const id = req.session.user_id;
-  
+
   if (id) {
     console.log(id, 'circular');
     res.redirect("/urls");
@@ -156,12 +156,12 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  
+
   const user = getUserByEmail(email, userDatabase);
   if (!user) { //returned undefined or otherwise
     return res.status(401).send('user not found');
   }
-  
+
   if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send('the passwords do not match');
   }
@@ -177,11 +177,11 @@ app.post("/logout", (req, res) => {
 app.get('/u/:id', (req, res) => {
   const userId = req.session.user_id;
   const user = userDatabase[userId];
-  
+
   if (!user) {
     return res.status(401).send("Only logged in users can shorten URLs");
   }
-  
+
   const id = req.params.id;
   if (!urlDatabase[id]) {
     return res.status(404).send("That URL does not exist!");
@@ -194,24 +194,28 @@ app.get('/u/:id', (req, res) => {
 app.get('/urls/:id', (req, res) => {
   const userId = req.session.user_id;
   const user = userDatabase[userId];
-  
+
   if (!user) {
     return res.status(401).send("Only logged in users can shorten URLs");
   }
-  
+
   const id = req.params.id;
   if (!urlDatabase[id]) {
     return res.status(404).send("That URL does not exist!");
   }
+  let urlOwner = urlDatabase[id].userID;
+  if (userId !== urlOwner) { //not URL Owner
+    return res.status(403).send("You don't own that URL! You can't Edit it!");
+  }
   const longURL = urlDatabase[id].longURL;
-  
+
   const templateVars = { id, longURL, user };
   res.render("urls_show", templateVars);
 });
 app.post("/urls/:id", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
-  
+
   if (!user) {  //not logged in
     return res.status(401).send("Only logged in users can shorten URLs");
   }
