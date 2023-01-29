@@ -5,14 +5,14 @@ const morgan = require("morgan");
 const session = require("cookie-session");
 
 const app = express();
-const PORT = 8080; // default port 8080
+const PORT = 8080; 
 app.set("view engine", "ejs");
 app.use(session({
   name: 'session',
   keys: ["2304f09f90garbagefdg90dgf", "extragoodgarbage34tr34tr345t", "g34590df34f43f2312e23"],
 
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  /* Cookie Options */
+  maxAge: 24 * 60 * 60 * 1000 
 }));
 app.use(morgan('dev'));
 
@@ -34,10 +34,10 @@ const urlDatabase = {
 const userDatabase = {
   "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '$2a$10$2H4FMClqnElLNs6KVI35WeuW0rr6DNPVQt6Bn00hWTnM.9M/c8rau' }
 };
+/** converts from raw buffer into string */
+app.use(express.urlencoded({ extended: true })); 
 
-app.use(express.urlencoded({ extended: true })); //converts from raw buffer into string
-
-//send to urls, which will send to login if not logged in
+/* send to urls, which will send to login if not logged in */
 app.get("/", (req, res) => {
   res.redirect("/urls");
 });
@@ -221,19 +221,18 @@ app.post("/urls/:id", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
 
-  if (!user) {  //not logged in
+  if (!user) {
     return res.status(401).send("Only logged in users can shorten URLs");
   }
 
-  //get url ID
   let urlIDToUpdate = req.params.id;
 
-  if (!urlDatabase[urlIDToUpdate]) { //id does not exist
+  if (!urlDatabase[urlIDToUpdate]) {
     return res.status(403).send("That's not a valid short URL by my database");
   }
 
   let urlOwner = urlDatabase[urlIDToUpdate].userID;
-  if (id !== urlOwner) { //not URL Owner
+  if (id !== urlOwner) {
     return res.status(403).send("You don't own that URL! You can't Edit it!");
   }
 
@@ -242,11 +241,13 @@ app.post("/urls/:id", (req, res) => {
   }
 
   urlDatabase[urlIDToUpdate].longURL = req.body.longURL;
-  //don't need to use render as we don't need a new page, we just want to go back to our new updated homepage
-  res.redirect("/urls"); //we don't pass any data back as the database gets redrawn on return to /urls
+  /* don't need to use render as we don't need a new page, we just want to go back to our new, updated homepage */
+  res.redirect("/urls");
+  /* we don't pass any data back as the database gets redrawn on return to /urls */
 });
 
-app.get('*', (req, res) => { //if we try to go to another page, we'll get sent to urls or login
+/* if we try to go to another page, we'll get sent to urls or login */
+app.get('*', (req, res) => { 
   res.redirect('/urls');
 });
 
