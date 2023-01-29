@@ -44,19 +44,24 @@ app.get("/", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
-  const user = userDatabase[id]; //this actually check the database for if that id exists
+
+  /* "it is better to check if session contains user_id and redirect to /login before reading the database" -Rahul */
+  if (!id) {
+    res.redirect("/login");
+    return;
+  }
+  /* this actually checks the database for the current session's user */
+  const user = userDatabase[id];
   if (!user) {
     res.redirect("/login");
     return;
   }
-  let myURLs = urlsForUser(id, urlDatabase);
-
+  const myURLs = urlsForUser(id, urlDatabase);
 
   const templateVars = { myURLs, user };
 
   res.render("urls_index", templateVars);
 });
-
 app.post("/urls", (req, res) => {
   const id = req.session.user_id;
   const user = userDatabase[id];
@@ -65,8 +70,9 @@ app.post("/urls", (req, res) => {
     return res.status(401).send("Only logged in users can shorten URLs");
   }
 
+  /* crucial step of generating id and adding the new url to the database */
   let newId = generateRandomString();
-  urlDatabase[newId] = { longURL: req.body.longURL, userID: id }; //add it to the database!
+  urlDatabase[newId] = { longURL: req.body.longURL, userID: id };
   res.redirect(`/urls/${newId}`);
 });
 
@@ -78,7 +84,7 @@ app.get("/urls/new", (req, res) => {
     res.redirect("/login");
     return;
   }
-  // we've cut out templateVars = {user} as convenience variable
+  /* we've cut out templateVars = {user} as convenience variable */
   res.render("urls_new", { user });
 });
 
@@ -99,7 +105,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  //blanks
+
   if (!email || !password) {
     return res.status(400).send("Email or password are blank");
   }
@@ -113,7 +119,8 @@ app.post("/register", (req, res) => {
   userDatabase[id] = { id, email, password: hashedPassword };
 
   req.session.user_id = id;
-  res.redirect("/urls");  //second parameter for redirect is always a status code, we don't want to send a status code so we only have one parameter
+  /** second parameter for redirect is always a status code, we don't want to send a status code so we only have one parameter */
+  res.redirect("/urls");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -124,10 +131,9 @@ app.post("/urls/:id/delete", (req, res) => {
     return res.status(401).send("Only logged in users can delete URLs");
   }
 
-  //get url ID
   const urlToDelete = req.params.id;
 
-  if (!urlDatabase[urlToDelete]) { //id does not exist
+  if (!urlDatabase[urlToDelete]) {
     return res.status(403).send("That's not a valid short URL by my database");
   }
 
@@ -138,7 +144,6 @@ app.post("/urls/:id/delete", (req, res) => {
   delete urlDatabase[urlToDelete];
   res.redirect("/urls");
 });
-
 
 app.get("/login", (req, res) => {
   const id = req.session.user_id;
@@ -158,7 +163,7 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
 
   const user = getUserByEmail(email, userDatabase);
-  if (!user) { //returned undefined or otherwise
+  if (!user) {
     return res.status(401).send('user not found');
   }
 
