@@ -5,14 +5,14 @@ const morgan = require("morgan");
 const session = require("cookie-session");
 
 const app = express();
-const PORT = 8080; 
+const PORT = 8080;
 app.set("view engine", "ejs");
 app.use(session({
   name: 'session',
   keys: ["2304f09f90garbagefdg90dgf", "extragoodgarbage34tr34tr345t", "g34590df34f43f2312e23"],
 
   /* Cookie Options */
-  maxAge: 24 * 60 * 60 * 1000 
+  maxAge: 24 * 60 * 60 * 1000
 }));
 app.use(morgan('dev'));
 
@@ -35,7 +35,7 @@ const userDatabase = {
   "b6789d": { id: "b6789d", email: 'bob@shaw.ca', password: '$2a$10$2H4FMClqnElLNs6KVI35WeuW0rr6DNPVQt6Bn00hWTnM.9M/c8rau' }
 };
 /** converts from raw buffer into string */
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.urlencoded({ extended: true }));
 
 /* send to urls, which will send to login if not logged in */
 app.get("/", (req, res) => {
@@ -209,7 +209,7 @@ app.get('/urls/:id', (req, res) => {
     return res.status(404).send("That URL does not exist!");
   }
   let urlOwner = urlDatabase[id].userID;
-  if (userId !== urlOwner) { //not URL Owner
+  if (userId !== urlOwner) {
     return res.status(403).send("You don't own that URL! You can't Edit it!");
   }
   const longURL = urlDatabase[id].longURL;
@@ -247,7 +247,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 /* if we try to go to another page, we'll get sent to urls or login */
-app.get('*', (req, res) => { 
+app.get('*', (req, res) => {
   res.redirect('/urls');
 });
 
